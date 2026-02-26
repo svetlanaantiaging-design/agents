@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Агент 2 — Финансовый анализ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #2a2a38;
+      --border2: #3a3a4a;
+      --text: #e8e8f0;
+      --muted: #7070a0;
+      --gold: #f0c060;
+      --gold2: #c89030;
+      --green: #40c080;
+      --red: #f05060;
+      --blue: #6080f0;
+      --purple: #a060f0;
+    }
+    body { font-family: 'Manrope', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .syne { font-family: 'Syne', sans-serif; }
+
+    /* LAYOUT */
+    .app { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px; flex-shrink: 0; background: var(--surface);
+      border-right: 1px solid var(--border); padding: 32px 24px;
+      display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+    }
+    .logo { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; color: var(--gold); letter-spacing: -0.02em; margin-bottom: 4px; }
+    .agent-tag { font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 36px; }
+
+    .nav { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+      border-radius: 8px; cursor: pointer; transition: all 0.15s;
+      font-size: 13px; color: var(--muted); border: 1px solid transparent;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--surface2); color: var(--gold); border-color: var(--border); }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-footer { padding-top: 24px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+    /* MAIN */
+    .main { flex: 1; overflow-y: auto; }
+
+    /* INPUT FORM */
+    .input-wrap { padding: 56px 64px; max-width: 680px; }
+    .form-badge { display: inline-block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold2); padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
+    .form-title { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; line-height: 1.15; margin-bottom: 10px; letter-spacing: -0.02em; }
+    .form-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 48px; line-height: 1.6; }
+
+    .field { margin-bottom: 20px; }
+    .field-label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .field-label span { color: var(--gold); }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 13px 16px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text);
+      outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--gold2); box-shadow: 0 0 0 3px rgba(192,144,48,0.1); }
+    select { cursor: pointer; }
+    select option { background: var(--surface); }
+    .input-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .field-error { border-color: var(--red) !important; }
+    .error-msg { font-size: 11px; color: var(--red); margin-top: 4px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    .section-divider { height: 1px; background: var(--border); margin: 32px 0; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px; }
+
+    /* CHOICE CHIPS */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--surface); font-size: 12px; color: var(--muted);
+      cursor: pointer; transition: all 0.15s; font-family: 'Manrope', sans-serif;
+    }
+    .chip:hover { border-color: var(--gold2); color: var(--text); }
+    .chip.selected { border-color: var(--gold); background: rgba(240,192,96,0.08); color: var(--gold); }
+
+    .btn-run {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--gold); color: var(--bg); border: none; border-radius: 8px;
+      padding: 16px 40px; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; margin-top: 40px; letter-spacing: -0.01em;
+    }
+    .btn-run:hover { background: #f8d070; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(240,192,96,0.25); }
+
+    /* LOADING */
+    .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }
+    .loading-ring { width: 56px; height: 56px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 24px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .loading-sub { font-size: 13px; color: var(--muted); }
+    .loading-steps { margin-top: 32px; display: flex; flex-direction: column; gap: 10px; }
+    .loading-step { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+    .loading-step.done { color: var(--green); }
+    .loading-step.active { color: var(--text); }
+    .step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .loading-step.done .step-dot { background: var(--green); }
+    .loading-step.active .step-dot { background: var(--gold); }
+
+    /* DASHBOARD */
+    .dashboard { padding: 40px 48px; }
+    .dash-header { margin-bottom: 36px; }
+    .dash-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .dash-sub { font-size: 13px; color: var(--muted); }
+
+    /* KPI GRID */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px; }
+    .kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 500; margin-bottom: 4px; }
+    .kpi-value.gold { color: var(--gold); }
+    .kpi-value.green { color: var(--green); }
+    .kpi-value.red { color: var(--red); }
+    .kpi-value.blue { color: var(--blue); }
+    .kpi-sub { font-size: 11px; color: var(--muted); }
+    .kpi-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-top: 6px; }
+    .badge-green { background: rgba(64,192,128,0.12); color: var(--green); }
+    .badge-red { background: rgba(240,80,96,0.12); color: var(--red); }
+    .badge-gold { background: rgba(240,192,96,0.12); color: var(--gold); }
+
+    /* PANELS */
+    .panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .panel-row.full { grid-template-columns: 1fr; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .panel-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .panel-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+
+    /* BARS */
+    .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .bar-label { font-size: 12px; color: var(--muted); width: 140px; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+    .bar-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); width: 80px; text-align: right; flex-shrink: 0; }
+
+    /* SCENARIOS */
+    .scenario-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .scenario-card { border-radius: 10px; padding: 18px; border: 1px solid; }
+    .scenario-card.cons { background: rgba(240,80,96,0.05); border-color: rgba(240,80,96,0.2); }
+    .scenario-card.base { background: rgba(240,192,96,0.05); border-color: rgba(240,192,96,0.3); }
+    .scenario-card.opt  { background: rgba(64,192,128,0.05); border-color: rgba(64,192,128,0.2); }
+    .scenario-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .scenario-card.cons .scenario-label { color: var(--red); }
+    .scenario-card.base .scenario-label { color: var(--gold); }
+    .scenario-card.opt  .scenario-label { color: var(--green); }
+    .scenario-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+    .scenario-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+    /* UNIT ECONOMICS */
+    .ue-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .ue-row:last-child { border-bottom: none; }
+    .ue-name { font-size: 13px; color: var(--muted); }
+    .ue-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .ue-status { font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+
+    /* BEP */
+    .bep-visual { position: relative; height: 80px; background: var(--surface2); border-radius: 8px; margin: 16px 0; overflow: hidden; }
+    .bep-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gold); }
+    .bep-label { position: absolute; top: 8px; font-size: 10px; color: var(--gold); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+    .bep-zone-left { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(240,80,96,0.08); }
+    .bep-zone-right { position: absolute; right: 0; top: 0; bottom: 0; background: rgba(64,192,128,0.08); }
+    .bep-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid var(--bg); }
+
+    /* RECOMMENDATIONS */
+    .rec-list { display: flex; flex-direction: column; gap: 10px; }
+    .rec-item { display: flex; gap: 14px; padding: 14px 16px; background: var(--surface2); border-radius: 8px; border-left: 3px solid; }
+    .rec-item.critical { border-color: var(--red); }
+    .rec-item.warning { border-color: var(--gold); }
+    .rec-item.good { border-color: var(--green); }
+    .rec-icon { font-size: 18px; flex-shrink: 0; }
+    .rec-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .rec-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* NEXT STEP */
+    .next-card { background: linear-gradient(135deg, rgba(240,192,96,0.08), rgba(240,192,96,0.03)); border: 1px solid rgba(240,192,96,0.25); border-radius: 12px; padding: 28px 32px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .next-text .next-label { font-size: 10px; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+    .next-text .next-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .next-text .next-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .btn-next { background: var(--gold); color: var(--bg); border: none; border-radius: 8px; padding: 13px 28px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .btn-next:hover { background: #f8d070; }
+
+    .btn-reset { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 12px 24px; font-family: 'Manrope', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; margin-top: 12px; transition: all 0.2s; }
+    .btn-reset:hover { border-color: var(--text); color: var(--text); }
+
+    /* TABS */
+    .tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+    .tab { flex: 1; padding: 9px; border-radius: 7px; border: none; background: none; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .tab.active { background: var(--surface2); color: var(--gold); border: 1px solid var(--border); }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .input-wrap, .dashboard { padding: 28px 20px; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .panel-row, .scenario-grid, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ─── ФОРМАТИРОВАНИЕ ───────────────────────────────────────────────────────────
+const fmt = (n) => {
+  if (n >= 1000000000) return (n/1000000000).toFixed(1) + ' млрд';
+  if (n >= 1000000) return (n/1000000).toFixed(1) + ' млн';
+  if (n >= 1000) return (n/1000).toFixed(0) + ' тыс';
+  return n.toFixed(0);
+};
+const fmtPct = (n) => (n*100).toFixed(1) + '%';
+const fmtX = (n) => n.toFixed(1) + 'x';
+
+// ─── РАСЧЁТ ФИНАНСОВОЙ МОДЕЛИ ─────────────────────────────────────────────────
+const buildModel = (f) => {
+  const revenue = f.revenue;
+  const cogs = revenue * f.cogsPercent;
+  const grossProfit = revenue - cogs;
+  const grossMargin = grossProfit / revenue;
+
+  const fixedCosts = f.fixedCosts;
+  const variableCosts = cogs;
+  const totalCosts = fixedCosts + variableCosts;
+  const ebitda = revenue - totalCosts;
+  const ebitdaMargin = ebitda / revenue;
+  const netProfit = ebitda * (1 - f.taxRate);
+  const netMargin = netProfit / revenue;
+
+  // Break Even
+  const contributionMargin = 1 - f.cogsPercent;
+  const bepRevenue = fixedCosts / contributionMargin;
+  const bepUnits = bepRevenue / f.avgCheck;
+  const marginOfSafety = (revenue - bepRevenue) / revenue;
+
+  // Unit Economics
+  const ltv = f.avgCheck * f.avgTransactions * (1 / Math.max(f.churnRate, 0.01));
+  const ltvCacRatio = ltv / Math.max(f.cac, 1);
+  const cacPayback = f.cac / (f.avgCheck * (1 - f.cogsPercent));
+
+  // Сценарии
+  const scenarios = {
+    cons: {
+      label: '🔴 Консервативный',
+      revenue: revenue * 0.7,
+      ebitda: (revenue * 0.7) - fixedCosts - (revenue * 0.7 * f.cogsPercent),
+      growth: -30,
+      desc: 'Рынок стагнирует, клиентов меньше плана',
+    },
+    base: {
+      label: '🟡 Базовый',
+      revenue: revenue,
+      ebitda: ebitda,
+      growth: 0,
+      desc: 'Текущий план выполняется',
+    },
+    opt: {
+      label: '🟢 Оптимистичный',
+      revenue: revenue * 1.4,
+      ebitda: (revenue * 1.4) - fixedCosts - (revenue * 1.4 * f.cogsPercent),
+      growth: +40,
+      desc: 'Активный рост, новые каналы',
+    },
+  };
+
+  // Структура затрат
+  const costStructure = [
+    { label: 'Себестоимость (COGS)', value: cogs, pct: cogs/revenue, color: '#f05060' },
+    { label: 'Постоянные расходы', value: fixedCosts, pct: fixedCosts/revenue, color: '#6080f0' },
+    { label: 'Валовая прибыль', value: grossProfit, pct: grossMargin, color: '#40c080' },
+  ];
+
+  // Рекомендации
+  const recs = [];
+
+  if (grossMargin < 0.3) recs.push({ type: 'critical', icon: '⚠️', title: 'Критически низкая маржа', desc: `Валовая маржа ${fmtPct(grossMargin)} — ниже минимума. Нужно срочно повысить цены или снизить себестоимость.` });
+  else if (grossMargin < 0.5) recs.push({ type: 'warning', icon: '📊', title: 'Маржа требует улучшения', desc: `Валовая маржа ${fmtPct(grossMargin)}. Цель: 50%+. Проанализируйте структуру себестоимости.` });
+  else recs.push({ type: 'good', icon: '✅', title: 'Хорошая валовая маржа', desc: `${fmtPct(grossMargin)} — здоровый показатель. Фокусируйтесь на масштабировании.` });
+
+  if (ltvCacRatio < 1) recs.push({ type: 'critical', icon: '🚨', title: 'LTV/CAC меньше 1 — опасно', desc: 'Вы тратите на привлечение клиента больше чем он приносит. Нужно либо снизить CAC, либо поднять LTV.' });
+  else if (ltvCacRatio < 3) recs.push({ type: 'warning', icon: '📈', title: 'LTV/CAC требует роста', desc: `${fmtX(ltvCacRatio)} — минимально приемлемо. Цель: 3x+. Работайте над удержанием клиентов.` });
+  else recs.push({ type: 'good', icon: '💰', title: 'Отличный LTV/CAC', desc: `${fmtX(ltvCacRatio)} — можно смело увеличивать маркетинговый бюджет.` });
+
+  if (marginOfSafety < 0.1) recs.push({ type: 'critical', icon: '🔴', title: 'Близко к точке безубыточности', desc: 'Запас прочности менее 10%. Любое снижение продаж приведёт к убыткам.' });
+  else if (marginOfSafety < 0.3) recs.push({ type: 'warning', icon: '⚡', title: 'Умеренный запас прочности', desc: `${fmtPct(marginOfSafety)} над точкой безубыточности. Рекомендуем снизить постоянные расходы.` });
+  else recs.push({ type: 'good', icon: '🛡️', title: 'Устойчивая позиция', desc: `Запас прочности ${fmtPct(marginOfSafety)} — бизнес устойчив к снижению продаж.` });
+
+  if (f.churnRate > 0.15) recs.push({ type: 'critical', icon: '📉', title: 'Высокий отток клиентов', desc: `Churn ${fmtPct(f.churnRate)} — критически высокий. Нужна программа удержания до начала масштабирования.` });
+  else if (f.churnRate > 0.05) recs.push({ type: 'warning', icon: '🔄', title: 'Churn можно улучшить', desc: `${fmtPct(f.churnRate)} — выше нормы. Внедрите NPS-опросы и онбординг.` });
+
+  return { revenue, cogs, grossProfit, grossMargin, fixedCosts, totalCosts, ebitda, ebitdaMargin, netProfit, netMargin, bepRevenue, bepUnits, marginOfSafety, ltv, ltvCacRatio, cacPayback, scenarios, costStructure, recs };
+};
+
+// ─── LOADING SCREEN ───────────────────────────────────────────────────────────
+const LoadingScreen = () => {
+  const [step, setStep] = useState(0);
+  const steps = ['Считаем P&L и маржинальность', 'Строим Unit Economics', 'Анализируем точку безубыточности', 'Формируем сценарии', 'Готовим рекомендации'];
+  useEffect(() => { const iv = setInterval(() => setStep(s => s < steps.length - 1 ? s + 1 : s), 500); return () => clearInterval(iv); }, []);
+  return (
+    <div className="loading-wrap">
+      <div className="loading-ring" />
+      <div className="loading-title">Считаем модель…</div>
+      <div className="loading-sub">Финансовый анализ вашего бизнеса</div>
+      <div className="loading-steps">
+        {steps.map((s, i) => (
+          <div key={i} className={`loading-step ${i < step ? 'done' : i === step ? 'active' : ''}`}>
+            <div className="step-dot" />{i < step ? '✓ ' : ''}{s}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+const Dashboard = ({ model, form, onReset }) => {
+  const [tab, setTab] = useState('overview');
+  const m = model;
+
+  const bepPct = Math.min(m.bepRevenue / form.revenue, 0.9);
+
+  return (
+    <div className="dashboard">
+      <div className="dash-header">
+        <div className="dash-title">Финансовая картина — {form.bizName || 'Ваш бизнес'}</div>
+        <div className="dash-sub">На основе введённых данных · {new Date().toLocaleDateString('ru-RU')}</div>
+      </div>
+
+      <div className="tabs">
+        {[['overview','📊 Обзор'],['unitec','⚡ Unit Economics'],['scenarios','🎯 Сценарии'],['recs','💡 Рекомендации']].map(([val, label]) => (
+          <button key={val} className={`tab ${tab === val ? 'active' : ''}`} onClick={() => setTab(val)}>{label}</button>
+        ))}
+      </div>
+
+      {tab === 'overview' && (
+        <>
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <div className="kpi-label">Выручка</div>
+              <div className="kpi-value gold mono">{fmt(m.revenue)} ₸</div>
+              <div className="kpi-sub">в месяц</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Валовая маржа</div>
+              <div className={`kpi-value mono ${m.grossMargin > 0.4 ? 'green' : m.grossMargin > 0.2 ? 'gold' : 'red'}`}>{fmtPct(m.grossMargin)}</div>
+              <div className="kpi-sub">Прибыль после COGS</div>
+              <div className={`kpi-badge ${m.grossMargin > 0.4 ? 'badge-green' : 'badge-red'}`}>{m.grossMargin > 0.4 ? '✓ норма' : '↑ нужен рост'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">EBITDA</div>
+              <div className={`kpi-value mono ${m.ebitda > 0 ? 'green' : 'red'}`}>{fmt(m.ebitda)} ₸</div>
+              <div className="kpi-sub">{fmtPct(m.ebitdaMargin)} от выручки</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Запас прочности</div>
+              <div className={`kpi-value mono ${m.marginOfSafety > 0.3 ? 'green' : m.marginOfSafety > 0.1 ? 'gold' : 'red'}`}>{fmtPct(m.marginOfSafety)}</div>
+              <div className="kpi-sub">Над точкой безубыточности</div>
+            </div>
+          </div>
+
+          <div className="panel-row">
+            <div className="panel">
+              <div className="panel-title">Структура затрат</div>
+              <div className="panel-sub">Куда уходит выручка</div>
+              {m.costStructure.map((c, i) => (
+                <div key={i} className="bar-row">
+                  <div className="bar-label">{c.label}</div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{width:`${Math.min(c.pct*100,100)}%`, background: c.color}} />
+                  </div>
+                  <div className="bar-val mono">{fmt(c.value)} ₸</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Точка безубыточности</div>
+              <div className="panel-sub">При каком объёме продаж вы выходите в ноль</div>
+              <div className="bep-visual">
+                <div className="bep-zone-left" style={{width:`${bepPct*100}%`}} />
+                <div className="bep-zone-right" style={{left:`${bepPct*100}%`}} />
+                <div className="bep-line" style={{left:`${bepPct*100}%`}} />
+                <div className="bep-label" style={{left:`${bepPct*100+1}%`}}>BEP</div>
+                <div className="bep-dot" style={{left:`${bepPct*100}%`, top:'50%', background:'var(--gold)'}} />
+                <div className="bep-dot" style={{left:'98%', top:'50%', background:'var(--green)'}} />
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginTop:'8px'}}>
+                <div>
+                  <div style={{fontSize:'10px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'4px'}}>BEP выручка</div>
+                  <div className="mono" style={{fontSize:'18px',color:'var(--gold)'}}>{fmt(m.bepRevenue)} ₸</div>
+                </div>
+                <div>
+                  <div style={{fontSize:'10px',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'4px'}}>BEP заказов</div>
+                  <div className="mono" style={{fontSize:'18px',color:'var(--gold)'}}>{Math.ceil(m.bepUnits)} шт</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel-row full">
+            <div className="panel">
+              <div className="panel-title">P&L — Отчёт о прибылях и убытках</div>
+              <div className="panel-sub">Месячный срез</div>
+              {[
+                ['Выручка', m.revenue, 'gold', null],
+                ['Себестоимость (COGS)', -m.cogs, 'red', fmtPct(m.cogs/m.revenue)],
+                ['Валовая прибыль', m.grossProfit, m.grossProfit > 0 ? 'green' : 'red', fmtPct(m.grossMargin)],
+                ['Постоянные расходы', -m.fixedCosts, 'red', fmtPct(m.fixedCosts/m.revenue)],
+                ['EBITDA', m.ebitda, m.ebitda > 0 ? 'green' : 'red', fmtPct(m.ebitdaMargin)],
+                ['Налоги', -(m.ebitda > 0 ? m.ebitda * form.taxRate : 0), 'red', null],
+                ['Чистая прибыль', m.netProfit, m.netProfit > 0 ? 'green' : 'red', fmtPct(m.netMargin)],
+              ].map(([label, val, color, pct], i) => (
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid var(--border)',fontSize:'13px'}}>
+                  <span style={{color:'var(--muted)'}}>{label}</span>
+                  <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                    {pct && <span style={{fontSize:'11px',color:'var(--muted)'}}>{pct}</span>}
+                    <span className="mono" style={{color:`var(--${color})`,fontWeight:500}}>{val < 0 ? '−' : ''}{fmt(Math.abs(val))} ₸</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === 'unitec' && (
+        <>
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <div className="kpi-label">LTV</div>
+              <div className="kpi-value gold mono">{fmt(m.ltv)} ₸</div>
+              <div className="kpi-sub">Lifetime Value клиента</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">CAC</div>
+              <div className="kpi-value blue mono">{fmt(form.cac)} ₸</div>
+              <div className="kpi-sub">Стоимость привлечения</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">LTV / CAC</div>
+              <div className={`kpi-value mono ${m.ltvCacRatio >= 3 ? 'green' : m.ltvCacRatio >= 1 ? 'gold' : 'red'}`}>{fmtX(m.ltvCacRatio)}</div>
+              <div className="kpi-sub">Цель: 3x+</div>
+              <div className={`kpi-badge ${m.ltvCacRatio >= 3 ? 'badge-green' : m.ltvCacRatio >= 1 ? 'badge-gold' : 'badge-red'}`}>{m.ltvCacRatio >= 3 ? '✓ отлично' : m.ltvCacRatio >= 1 ? '~ норма' : '✗ убыток'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">CAC Payback</div>
+              <div className={`kpi-value mono ${m.cacPayback <= 6 ? 'green' : m.cacPayback <= 12 ? 'gold' : 'red'}`}>{m.cacPayback.toFixed(1)} мес</div>
+              <div className="kpi-sub">Окупаемость клиента</div>
+            </div>
+          </div>
+
+          <div className="panel-row">
+            <div className="panel">
+              <div className="panel-title">Метрики клиента</div>
+              <div className="panel-sub">Unit Economics в деталях</div>
+              {[
+                ['Средний чек', `${fmt(form.avgCheck)} ₸`, form.avgCheck > 0 ? 'green' : 'red'],
+                ['Покупок в год', `${form.avgTransactions}`, 'text'],
+                ['Churn Rate', fmtPct(form.churnRate), form.churnRate < 0.05 ? 'green' : form.churnRate < 0.15 ? 'gold' : 'red'],
+                ['Маржа на клиента', `${fmt(form.avgCheck * (1 - form.cogsPercent))} ₸`, 'green'],
+                ['LTV', `${fmt(m.ltv)} ₸`, 'gold'],
+                ['CAC', `${fmt(form.cac)} ₸`, 'blue'],
+                ['LTV/CAC', fmtX(m.ltvCacRatio), m.ltvCacRatio >= 3 ? 'green' : m.ltvCacRatio >= 1 ? 'gold' : 'red'],
+                ['Payback Period', `${m.cacPayback.toFixed(1)} мес`, m.cacPayback <= 6 ? 'green' : 'gold'],
+              ].map(([name, val, color], i) => (
+                <div key={i} className="ue-row">
+                  <span className="ue-name">{name}</span>
+                  <span className="ue-val mono" style={{color:`var(--${color})`}}>{val}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Рычаги роста LTV</div>
+              <div className="panel-sub">Что даст +10% к каждому параметру</div>
+              {[
+                { label: 'Средний чек +10%', delta: form.avgCheck * 0.1 * form.avgTransactions / Math.max(form.churnRate, 0.01), color: 'green' },
+                { label: 'Транзакций +10%', delta: form.avgCheck * (form.avgTransactions * 0.1) / Math.max(form.churnRate, 0.01), color: 'blue' },
+                { label: 'Churn −10%', delta: m.ltv * 0.1, color: 'purple' },
+                { label: 'CAC −10%', delta: form.cac * 0.1, color: 'gold' },
+              ].map((r, i) => (
+                <div key={i} style={{padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
+                    <span style={{fontSize:'13px',color:'var(--muted)'}}>{r.label}</span>
+                    <span className="mono" style={{fontSize:'13px',color:`var(--${r.color})`}}>+{fmt(r.delta)} ₸</span>
+                  </div>
+                  <div style={{height:'4px',background:'var(--border)',borderRadius:'2px',overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${Math.min(r.delta/m.ltv*100*3,100)}%`,background:`var(--${r.color})`,borderRadius:'2px'}} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === 'scenarios' && (
+        <>
+          <div className="scenario-grid" style={{marginBottom:'20px'}}>
+            {Object.entries(m.scenarios).map(([key, s]) => (
+              <div key={key} className={`scenario-card ${key}`}>
+                <div className="scenario-label">{s.label}</div>
+                <div className="scenario-value mono">{fmt(s.revenue)} ₸</div>
+                <div style={{fontSize:'11px',color:'var(--muted)',marginBottom:'8px'}}>выручка</div>
+                <div className="scenario-value mono" style={{fontSize:'16px',color: s.ebitda > 0 ? 'var(--green)' : 'var(--red)'}}>{fmt(Math.abs(s.ebitda))} ₸</div>
+                <div style={{fontSize:'11px',color:'var(--muted)',marginBottom:'10px'}}>EBITDA {s.ebitda < 0 ? '(убыток)' : ''}</div>
+                <div className="scenario-desc">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel">
+            <div className="panel-title">Анализ чувствительности</div>
+            <div className="panel-sub">Как изменение выручки влияет на прибыль</div>
+            {[-30,-20,-10,0,10,20,30].map(pct => {
+              const rev = form.revenue * (1 + pct/100);
+              const ebitda = rev - m.fixedCosts - rev * form.cogsPercent;
+              const isBase = pct === 0;
+              return (
+                <div key={pct} style={{display:'flex',alignItems:'center',gap:'16px',padding:'9px 0',borderBottom:'1px solid var(--border)',background: isBase ? 'rgba(240,192,96,0.05)' : 'transparent',borderRadius: isBase ? '6px' : '0',paddingLeft: isBase ? '8px' : '0'}}>
+                  <span className="mono" style={{fontSize:'12px',color: pct < 0 ? 'var(--red)' : pct > 0 ? 'var(--green)' : 'var(--gold)',width:'50px'}}>{pct > 0 ? '+' : ''}{pct}%</span>
+                  <span style={{fontSize:'12px',color:'var(--muted)',width:'120px'}}>{fmt(rev)} ₸</span>
+                  <div style={{flex:1,height:'4px',background:'var(--border)',borderRadius:'2px',overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${Math.min(Math.max(ebitda/form.revenue*100+50,0),100)}%`,background: ebitda > 0 ? 'var(--green)' : 'var(--red)',borderRadius:'2px'}} />
+                  </div>
+                  <span className="mono" style={{fontSize:'12px',color: ebitda > 0 ? 'var(--green)' : 'var(--red)',width:'120px',textAlign:'right'}}>{ebitda > 0 ? '+' : '−'}{fmt(Math.abs(ebitda))} ₸</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {tab === 'recs' && (
+        <>
+          <div className="panel-row full" style={{marginBottom:'20px'}}>
+            <div className="panel">
+              <div className="panel-title">Рекомендации агента</div>
+              <div className="panel-sub">На основе вашей финансовой модели</div>
+              <div className="rec-list">
+                {m.recs.map((r, i) => (
+                  <div key={i} className={`rec-item ${r.type}`}>
+                    <div className="rec-icon">{r.icon}</div>
+                    <div>
+                      <div className="rec-title">{r.title}</div>
+                      <div className="rec-desc">{r.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="panel-row">
+            <div className="panel">
+              <div className="panel-title">Приоритеты на месяц</div>
+              <div className="panel-sub">С чего начать прямо сейчас</div>
+              {[
+                m.ltvCacRatio < 3 && { num: '01', text: 'Снизить CAC — проанализировать стоимость каждого канала привлечения' },
+                m.churnRate > 0.05 && { num: '02', text: 'Улучшить онбординг — снизить отток клиентов в первые 30 дней' },
+                m.grossMargin < 0.5 && { num: '03', text: 'Пересмотреть ценообразование — поднять цены или снизить COGS' },
+                m.marginOfSafety < 0.2 && { num: '04', text: 'Снизить постоянные расходы — найти 10-15% экономии в фиксированных затратах' },
+                { num: m.ltvCacRatio >= 3 ? '01' : '05', text: 'Зафиксировать реальные показатели — собирать данные ежемесячно для отслеживания динамики' },
+              ].filter(Boolean).slice(0,4).map((p, i) => (
+                <div key={i} style={{display:'flex',gap:'12px',padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                  <span className="mono" style={{fontSize:'11px',color:'var(--gold)',width:'24px',flexShrink:0}}>{p.num}</span>
+                  <span style={{fontSize:'13px',color:'var(--text)',lineHeight:1.5}}>{p.text}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Ключевые метрики для контроля</div>
+              <div className="panel-sub">Отслеживайте еженедельно</div>
+              {[
+                { metric: 'MRR / Выручка', target: `>${fmt(form.revenue)} ₸`, status: 'gold' },
+                { metric: 'Валовая маржа', target: '>50%', status: m.grossMargin >= 0.5 ? 'green' : 'red' },
+                { metric: 'LTV/CAC', target: '>3x', status: m.ltvCacRatio >= 3 ? 'green' : 'red' },
+                { metric: 'Churn Rate', target: '<5%', status: form.churnRate <= 0.05 ? 'green' : 'red' },
+                { metric: 'CAC Payback', target: '<12 мес', status: m.cacPayback <= 12 ? 'green' : 'red' },
+              ].map((k, i) => (
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{fontSize:'13px',color:'var(--muted)'}}>{k.metric}</span>
+                  <span className="mono" style={{fontSize:'12px',color:`var(--${k.status})`}}>{k.target}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="next-card">
+        <div className="next-text">
+          <div className="next-label">Следующий шаг</div>
+          <div className="next-title">Маркетинг и продажи — Агент 3</div>
+          <div className="next-desc">Финансовая база есть. Теперь разберём как привлекать клиентов эффективнее и снизить CAC.</div>
+        </div>
+        <button className="btn-next" onClick={() => {
+          const raw = new URLSearchParams(window.location.search).get('profile');
+          const suffix = raw ? '?profile=' + encodeURIComponent(raw) : '';
+          window.location.href = 'https://svetlanaantiaging-design.github.io/agents/agent-3/' + suffix;
+        }}>Перейти к Агенту 3 →</button>
+      </div>
+
+      <button className="btn-reset" onClick={onReset}>← Пересчитать модель</button>
+    </div>
+  );
+};
+
+// ─── INPUT FORM ───────────────────────────────────────────────────────────────
+const InputForm = ({ onSubmit }) => {
+  const getProfileFromURL = () => {
+    try {
+      const p = new URLSearchParams(window.location.search).get('profile');
+      if (p) return JSON.parse(decodeURIComponent(p));
+    } catch {}
+    return null;
+  };
+  const profile = getProfileFromURL();
+
+  const [form, setForm] = useState({
+    bizName: profile?.companyName || profile?.firstName && `${profile.firstName} ${profile.lastName}` || '',
+    revenue: '',
+    cogsPercent: 0.4,
+    fixedCosts: '',
+    avgCheck: profile?.avgCheck?.replace(/[^\d]/g, '') || '',
+    avgTransactions: 12,
+    churnRate: 0.05,
+    cac: '',
+    taxRate: 0.2,
+  });
+  const [errors, setErrors] = useState({});
+
+  const set = (k, v) => { setForm(p => ({...p, [k]: v})); setErrors(p => ({...p, [k]: null})); };
+
+  const validate = () => true;
+
+  const handleSubmit = () => {
+    onSubmit({
+      ...form,
+      revenue: +form.revenue || 1000000,
+      fixedCosts: +form.fixedCosts || 0,
+      avgCheck: +form.avgCheck || 10000,
+      cac: +form.cac || 0,
+      cogsPercent: +form.cogsPercent,
+      avgTransactions: +form.avgTransactions,
+      churnRate: +form.churnRate,
+      taxRate: +form.taxRate,
+    });
+  };
+
+  return (
+    <div className="input-wrap">
+      <div className="form-badge">Агент 2 — Финансы</div>
+      <h1 className="form-title syne">Финансовая<br/>диагностика</h1>
+      <p className="form-subtitle">Введите реальные цифры вашего бизнеса — агент построит P&L, рассчитает Unit Economics и покажет точку безубыточности.</p>
+
+      {profile && (
+        <div style={{background:'rgba(240,192,96,0.06)',border:'1px solid rgba(240,192,96,0.2)',borderRadius:'8px',padding:'12px 16px',marginBottom:'28px',fontSize:'12px',color:'var(--muted)'}}>
+          ✓ Данные из квалификации подставлены · Уточните финансовые показатели
+        </div>
+      )}
+
+      <div className="field">
+        <label className="field-label">Название бизнеса</label>
+        <input type="text" value={form.bizName} onChange={e => set('bizName', e.target.value)} placeholder="Моя компания" />
+      </div>
+
+      <div className="section-divider" />
+      <div className="section-title">💰 Выручка и расходы</div>
+
+      <div className="grid-2">
+        <div className="field">
+          <label className="field-label">Выручка в месяц (₸) <span>*</span></label>
+          <input type="number" className="" value={form.revenue} onChange={e => set('revenue', e.target.value)} placeholder="5000000" />
+          
+        </div>
+        <div className="field">
+          <label className="field-label">Постоянные расходы/мес (₸)</label>
+          <input type="number" value={form.fixedCosts} onChange={e => set('fixedCosts', e.target.value)} placeholder="1500000" />
+          <div className="input-hint">Аренда, зарплаты, подписки — то что не зависит от продаж</div>
+        </div>
+      </div>
+
+      <div className="field">
+        <label className="field-label">Себестоимость (% от выручки)</label>
+        <div className="chips">
+          {[[0.2,'20%'],[0.3,'30%'],[0.4,'40%'],[0.5,'50%'],[0.6,'60%'],[0.7,'70%']].map(([val, label]) => (
+            <button key={val} className={`chip ${+form.cogsPercent === val ? 'selected' : ''}`} onClick={() => set('cogsPercent', val)}>{label}</button>
+          ))}
+        </div>
+        <div className="input-hint">Материалы, закупка товара, переменные расходы на производство услуги</div>
+      </div>
+
+      <div className="section-divider" />
+      <div className="section-title">⚡ Unit Economics</div>
+
+      <div className="grid-2">
+        <div className="field">
+          <label className="field-label">Средний чек (₸) <span>*</span></label>
+          <input type="number" className="" value={form.avgCheck} onChange={e => set('avgCheck', e.target.value)} placeholder="15000" />
+          
+        </div>
+        <div className="field">
+          <label className="field-label">Стоимость привлечения клиента CAC (₸)</label>
+          <input type="number" value={form.cac} onChange={e => set('cac', e.target.value)} placeholder="30000" />
+          <div className="input-hint">Бюджет на маркетинг ÷ кол-во новых клиентов</div>
+        </div>
+      </div>
+
+      <div className="grid-2">
+        <div className="field">
+          <label className="field-label">Покупок на клиента в год</label>
+          <div className="chips">
+            {[[1,'1'],[2,'2'],[4,'4'],[6,'6'],[12,'12'],[24,'24+']].map(([val, label]) => (
+              <button key={val} className={`chip ${+form.avgTransactions === val ? 'selected' : ''}`} onClick={() => set('avgTransactions', val)}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <label className="field-label">Отток клиентов в год (Churn)</label>
+          <div className="chips">
+            {[[0.02,'2%'],[0.05,'5%'],[0.1,'10%'],[0.2,'20%'],[0.3,'30%'],[0.5,'50%']].map(([val, label]) => (
+              <button key={val} className={`chip ${+form.churnRate === val ? 'selected' : ''}`} onClick={() => set('churnRate', val)}>{label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="section-divider" />
+      <div className="section-title">🏛️ Налоги</div>
+
+      <div className="field">
+        <label className="field-label">Налоговая ставка</label>
+        <div className="chips">
+          {[[0,'0% (Hub/льготы)'],[0.03,'3% (УСН)'],[0.1,'10%'],[0.15,'15%'],[0.2,'20% (КПН)']]
+            .map(([val, label]) => (
+              <button key={val} className={`chip ${+form.taxRate === val ? 'selected' : ''}`} onClick={() => set('taxRate', val)}>{label}</button>
+            ))}
+        </div>
+      </div>
+
+      <button className="btn-run" onClick={handleSubmit}>
+        Рассчитать финансовую модель →
+      </button>
+    </div>
+  );
+};
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+const NAV = [
+  ['📊', 'Дашборд'], ['⚡', 'Unit Economics'], ['🎯', 'Сценарии'], ['💡', 'Рекомендации'],
+];
+
+const App = () => {
+  const [screen, setScreen] = useState('input');
+  const [model, setModel] = useState(null);
+  const [formData, setFormData] = useState(null);
+
+  const handleSubmit = (f) => {
+    setFormData(f);
+    setScreen('loading');
+    window.scrollTo(0, 0);
+    setTimeout(() => {
+      setModel(buildModel(f));
+      setScreen('results');
+    }, 2500);
+  };
+
+  const handleReset = () => { setScreen('input'); setModel(null); window.scrollTo(0,0); };
+
+  const panelTitle = screen === 'input' ? 'Введите данные' : screen === 'loading' ? 'Считаем…' : formData?.bizName || 'Ваш бизнес';
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="logo">BusinessOS</div>
+        <div className="agent-tag">Агент 2 — Финансы</div>
+        <div className="nav">
+          {screen === 'results' ? NAV.map(([icon, label], i) => (
+            <div key={i} className="nav-item">
+              <span className="nav-icon">{icon}</span>{label}
+            </div>
+          )) : (
+            <div className="nav-item active">
+              <span className="nav-icon">📝</span>Ввод данных
+            </div>
+          )}
+        </div>
+        <div className="sidebar-footer">
+          Финансовая модель<br/>по реальным данным<br/>без допущений
+        </div>
+      </div>
+
+      <div className="main">
+        {screen === 'input' && <InputForm onSubmit={handleSubmit} />}
+        {screen === 'loading' && <LoadingScreen />}
+        {screen === 'results' && model && <Dashboard model={model} form={formData} onReset={handleReset} />}
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
